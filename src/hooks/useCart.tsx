@@ -32,10 +32,6 @@ export function CartProvider({ children }: CartProviderProps): JSX.Element {
     return [];
   });
 
-  useEffect(() => {
-    localStorage.setItem('@RocketShoes:cart', JSON.stringify(cart))
-  }, [cart])
-
   const addProduct = async (productId: number) => {
     try {
       const resProduct = await api.get(`/products/${productId}`)
@@ -62,7 +58,8 @@ export function CartProvider({ children }: CartProviderProps): JSX.Element {
       }
 
       setCart(newCart)
-    } catch {
+      localStorage.setItem('@RocketShoes:cart', JSON.stringify(newCart))
+    } catch (err) {
       toast.error('Erro na adição do produto');
     }
   };
@@ -71,12 +68,13 @@ export function CartProvider({ children }: CartProviderProps): JSX.Element {
     try {
       const productIndex = cart.findIndex(product => product.id === productId)
       if (productIndex < 0)
-        throw new Error()
+        throw Error()
 
       let newCart = [...cart]
       newCart.splice(productIndex, 1)
       setCart(newCart)
-    } catch {
+      localStorage.setItem('@RocketShoes:cart', JSON.stringify(newCart))
+    } catch (err) {
       toast.error('Erro na remoção do produto');
     }
   };
@@ -86,23 +84,25 @@ export function CartProvider({ children }: CartProviderProps): JSX.Element {
     amount,
   }: UpdateProductAmount) => {
     try {
-      if (amount <= 0)
+      if (amount < 1 || !amount)
         return
 
-      const productIndex = cart.findIndex(product => product.id === productId)
-      if (productIndex < 0)
-        throw new Error()
-
       const resProductStock = await api.get(`/stock/${productId}`)
-      if (!resProductStock.data.amount || resProductStock.data.amount < amount) {
+      if (!resProductStock.data) {
+        throw new Error()
+      }
+
+      if (resProductStock.data.amount < amount) {
         toast.error('Quantidade solicitada fora de estoque');
         return
       }
 
+      const productIndex = cart.findIndex(product => product.id === productId)
       let newCart = [...cart]
       newCart[productIndex].amount = amount
       setCart(newCart)
-    } catch {
+      localStorage.setItem('@RocketShoes:cart', JSON.stringify(newCart))
+    } catch (err) {
       toast.error('Erro na alteração de quantidade do produto');
     }
   };
